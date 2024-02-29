@@ -1,0 +1,39 @@
+﻿@{
+    ViewBag.Title = "Categoría";
+}
+
+<div class="container">
+    <br />
+    <div style="width:90%; margin:0 auto;">
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Edad</th>
+                    <th>Correo Electrónico</th>
+                </tr>
+            </thead>
+            <tbody id="data-body">
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+
+ 
+    fetch('https://localhost:7085/API/v1/listarCategoria/?Filtro=""')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('data-body');
+                console.log(data)
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${item.idCategoria}</td><td>${item.descripcion}</td><td>${item?.CorreoElectronico}</td>`;
+        tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+            console.error('Error:', error);
+            });
+</script>
+ 

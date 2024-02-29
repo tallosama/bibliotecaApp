@@ -4,25 +4,38 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<bibliotecaContext>(opt => opt.UseSqlServer(builder.Configuration.GetConnectionString("local")));
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("cors", builder =>
+    {
+        builder.WithOrigins("*")
+               .AllowAnyHeader()
+               .AllowAnyMethod();
+    });
+});
 var app = builder.Build();
+
+app.UseCors("cors");
+
+
 
 
 ///////ENPOINTS CATEGORIAS///////
-app.MapGet("/API/v1/listarCategoria/", async (HttpRequest request, bibliotecaContext db) =>
+app.MapGet("/API/v1/listarCategoria/{filtro}/", async (string filtro, bibliotecaContext db) =>
 {
-    var filtroRequest = await request.ReadFromJsonAsync<Filtro>();
-    string filtro = filtroRequest.filtro;
-    if (string.IsNullOrEmpty(filtro))
+    //var filtroRequest = await request.ReadFromJsonAsync<Filtro>();
+    //string filtro = filtroRequest.filtro;
+    if (filtro=="all")
         return await db.categoria.ToListAsync();
     else
         return await db.categoria.Where(e => e.descripcion.ToLower().Contains(filtro)).ToListAsync();
 });
 app.MapGet("/API/v1/CategoriaById/{idCategoria}", async (int idCategoria, bibliotecaContext db) => db.categoria.FindAsync(idCategoria));
 
-app.MapPost("/API/v1/agregarCategoria/", async (string descripcion, bibliotecaContext db) =>
+app.MapPost("/API/v1/agregarCategoria/", async (NuevaCategoria cat, bibliotecaContext db) =>
 {
     Categoria categoria = new Categoria();
-    categoria.descripcion = descripcion;
+    categoria.descripcion = cat.descripcion;
     categoria.tiempoRegistro = DateTime.Now;
     categoria.activo = true;
 
@@ -32,7 +45,7 @@ app.MapPost("/API/v1/agregarCategoria/", async (string descripcion, bibliotecaCo
     return Results.Ok(categoria.idCategoria);
 });
 
-app.MapPut("/API/v1/editarCategoria/{idCategoria}", async (int idCategoria, Categoria categoriaBody, bibliotecaContext db) =>
+app.MapPut("/API/v1/editarCategoria/{idCategoria}", async (int idCategoria, NuevaCategoria categoriaBody, bibliotecaContext db) =>
 {
     var resultado = await db.categoria.FindAsync(idCategoria);
     if (resultado is null) return Results.NotFound();
@@ -56,21 +69,21 @@ app.MapPut("/API/v1/eliminarCategoria/{idCategoria}/{estado}", async (int idCate
 
 ///////ENPOINTS LIBROS///////
 
-app.MapGet("/API/v1/listarLibro/", async (HttpRequest request, bibliotecaContext db) =>
+app.MapGet("/API/v1/{filtro}/", async (string filtro, bibliotecaContext db) =>
 {
-    var filtroRequest = await request.ReadFromJsonAsync<Filtro>();
-    string filtro = filtroRequest.filtro;
-    if (string.IsNullOrEmpty(filtro))
+
+    if (filtro == "all")
         return await db.libro.ToListAsync();
     else
         return await db.libro.Where(e => e.titulo.ToLower().Contains(filtro)).ToListAsync();
 });
 app.MapGet("/API/v1/libroById/{idLibro}", async (int idCategoria, bibliotecaContext db) => db.categoria.FindAsync(idCategoria));
 
-app.MapPost("/API/v1/agregarLibro/", async (string descripcion, bibliotecaContext db) =>
+app.MapPost("/API/v1/agregarLibro/", async (NuevoLibro li, bibliotecaContext db) =>
 {
     Libro libro = new Libro();
-    libro.titulo = descripcion;
+    libro.titulo = li.titulo;
+    libro.categoriaId.idCategoria = li.categoriaId;
     libro.tiempoRegistro = DateTime.Now;
     libro.activo = true;
 

@@ -5,35 +5,199 @@
 <div class="container">
     <br />
     <div style="width:90%; margin:0 auto;">
-        <table id="data-table">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Edad</th>
-                    <th>Correo Electrónico</th>
-                </tr>
-            </thead>
-            <tbody id="data-body">
-            </tbody>
-        </table>
+
+
+        <div class="row">
+            <div class="col-4">
+                <div class="input-group mb-3">
+                    <input type="text" id="buscarCat" class="form-control" placeholder="Digite para filtrar" aria-label="Filtro" aria-describedby="basic-addon2">
+
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Descripcion</th>
+                            <th>Registrado el</th>
+                            <th>Modificado el</th>
+                            <th>Activo</th>
+                            <th>Acciones</th>
+
+                        </tr>
+                    </thead>
+                    <tbody id="data-body">
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-8">
+
+                <div class="form-group">
+                    <label>Descripcion</label>
+                    <input type="text" class="form-control" id="nuevaDescripcion" placeholder="Introduzca una nueva descripcion">
+                    <small class="form-text text-muted">Debe de escribir una nueva descripción</small>
+                </div>
+
+
+                <button id="guardar" class="btn btn-primary">Guardar</button>
+                <button id="cancelar"  class="btn btn-danger">Cancelar</button>
+
+            </div>
+        </div>
     </div>
 </div>
 <script>
+    let edicion = null;
 
- 
-    fetch('https://localhost:7085/API/v1/listarCategoria/?Filtro=""')
+    function listarTodos() {
+        const tableBody = document.getElementById('data-body');
+        tableBody.innerHTML = '';
+        fetch('https://localhost:7085/API/v1/listarCategoria/all ', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+
+        })
             .then(response => response.json())
             .then(data => {
                 const tableBody = document.getElementById('data-body');
                 console.log(data)
                 data.forEach(item => {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td>${item.idCategoria}</td><td>${item.descripcion}</td><td>${item?.CorreoElectronico}</td>`;
-        tableBody.appendChild(row);
+                    row.innerHTML = `<td>${item.descripcion}</td>
+<td>${new Date(item?.tiempoRegistro).toISOString().split("T")[0]}</td>
+<td>${new Date(item?.tiempoModificacion).toISOString().split("T")[0]}</td>
+
+<td>${item.activo ? 'Activo' : 'Inactivo'}</td>
+<td>
+<button class="btn btn-primary" onclick="editar('${item.descripcion}','${item.idCategoria}')">Editar</button>
+
+<button class="btn btn-danger" onclick="anular(${item.idCategoria},${!item.activo})">${item.activo ? 'Anular' : 'Activar'}</button>
+</td>`;
+                    tableBody.appendChild(row);
                 });
             })
             .catch(error => {
-            console.error('Error:', error);
+                console.error('Error:', error);
             });
+
+    }
+    listarTodos();
+
+    document.getElementById("guardar").addEventListener("click", () => {
+        if (this.edicion == null) {
+            fetch('https://localhost:7085/API/v1/agregarCategoria/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    descripcion: document.getElementById("nuevaDescripcion").value
+                })
+
+            })
+                .then(response => response.json()).then(r => {
+                    console.log(r)
+                    document.getElementById("nuevaDescripcion").value = ""
+                    this.listarTodos()
+                })
+
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        } else {
+            fetch('https://localhost:7085/API/v1/editarCategoria/' + this.edicion, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    descripcion: document.getElementById("nuevaDescripcion").value
+                })
+
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log(response)
+                        document.getElementById("nuevaDescripcion").value=""
+                        this.listarTodos()
+                    }
+}) 
+
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    
+    })
+
+
+    function anular(e, accion) {
+        console.log(e, accion)
+
+        fetch('https://localhost:7085/API/v1/eliminarCategoria/' + e + '/' + accion, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+
+        })
+            .then(response => { if (response.ok) this.listarTodos(); })
+
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+
+    document.getElementById("buscarCat").addEventListener("keyup", (e) => {
+        const filtro = e.target.value;
+        if (!filtro)
+            this.listarTodos()
+        else {
+            fetch('https://localhost:7085/API/v1/listarCategoria/' + filtro, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('data-body');
+                    tableBody.innerHTML = '';
+                    data.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `<td>${item.descripcion}</td>
+<td>${new Date(item?.tiempoRegistro).toISOString().split("T")[0]}</td>
+<td>${new Date(item?.tiempoRegistro).toISOString().split("T")[0]}</td>
+<td>${item.activo ? 'Activo' : 'Inactivo'}</td>
+<td>
+
+<button class="btn btn-primary" onclick="editar('${item.descripcion},${item.idCategoria}')">Editar</button>
+
+<button class="btn btn-danger" onclick="anular(${item.idCategoria},${!item.activo})">${item.activo ? 'Anular' : 'Activar'}</button>
+
+</td>`;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+
+    })
+
+    function editar(descripcion, id) {
+        this.edicion=id*1
+       
+        console.log(this.edicion)
+        document.getElementById("nuevaDescripcion").value = descripcion;
+
+    }
+
+    
+
+    document.getElementById("cancelar").addEventListener("click", () => { this.edicion = null; document.getElementById("nuevaDescripcion").value =null})
 </script>
- 
